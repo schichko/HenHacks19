@@ -2,6 +2,7 @@
 
 #importing GUI Library
 import Tkinter
+import time
 #Importing stuff from Tkinter
 from tkinter import *
 
@@ -16,11 +17,31 @@ class Application(Tkinter.Frame):
     def init_window(self):
         self.master.title("GUI")
         self.pack(fill=BOTH,expand = 1)
+
+
+
+        self.T = Text(root, height=20, width=30)
+        self.T.place(x=30,y=50)
+        self.T.insert(END, "Just a text Widget\nin two lines\n")
+        self.T.config(state=DISABLED)
+
+        self.sayHiButton = Button(self,text = "Say Hi",command = lambda: self.say_Hi(self.T))
+        self.sayHiButton.pack(side="top")
+
         quitButton = Button(self,text = "Quit",command = self.client_exit)
         quitButton.place(x=0,y=0)
 
     def client_exit(self):
+        ##Doing print in here prints to consol
+        print("Goodbye")
+        time.sleep(1)
         exit()
+    def say_Hi(self,T):
+        print("Say Hi")
+        T.config(state = NORMAL)
+        T.insert(END, "Just a text Widget\nin two lines\n")
+        T.config(state=DISABLED)
+
 
 
 
