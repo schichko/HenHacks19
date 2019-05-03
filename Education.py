@@ -16,8 +16,11 @@ class Application(Tkinter.Frame):
     def init_window(self):
         self.master.title("GUI")
         self.pack(fill=BOTH,expand = 1)
-        quitButton = Button(self,text = "Quit")
+        quitButton = Button(self,text = "Quit",command = self.client_exit)
         quitButton.place(x=0,y=0)
+
+    def client_exit(self):
+        exit()
 
 
 
@@ -25,9 +28,13 @@ print("Hello");
 
 print("John Has the Code x=3 right now, can you help John turn that x into a 4?");
 
-
+#Sets up root to be a new Tkinter
 root = Tk();
+#Sets the size of the Window
+root.geometry("400x300")
+#Creates a new app with the root that we have created before
 app = Application(root)
+#Starts its loop
 root.mainloop();
 
 #Getting user input
