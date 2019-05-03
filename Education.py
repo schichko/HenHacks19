@@ -1,72 +1,245 @@
 #!/usr/bin/env python
+import tkinter
 
-#importing GUI Library
-import Tkinter
-import time
-#Importing stuff from Tkinter
-from tkinter import *
-
-
-
-class Application(Tkinter.Frame):
-    def __init__(self,master=None):
-        Frame.__init__(self,master)
-        self.master = master
-        self.init_window()
-    
-    def init_window(self):
-        self.master.title("GUI")
-        self.pack(fill=BOTH,expand = 1)
+def dnd_start(source, event):
+    h = DndHandler(source, event)
+    if h.root:
+        return h
+    else:
+        return None
 
 
 
-        self.T = Text(root, height=20, width=30)
-        self.T.place(x=30,y=50)
-        self.T.insert(END, "Just a text Widget\nin two lines\n")
-        self.T.config(state=DISABLED)
+class DndHandler:
 
-        self.sayHiButton = Button(self,text = "Say Hi",command = lambda: self.say_Hi(self.T))
-        self.sayHiButton.pack(side="top")
+    root = None
 
-        quitButton = Button(self,text = "Quit",command = self.client_exit)
-        quitButton.place(x=0,y=0)
+    def __init__(self, source, event):
+        if event.num > 5:
+            return
+        root = event.widget._root()
+        try:
+            root.__dnd
+            return # Don't start recursive dnd
+        except AttributeError:
+            root.__dnd = self
+            self.root = root
+        self.source = source
+        self.target = None
+        self.initial_button = button = event.num
+        self.initial_widget = widget = event.widget
+        self.release_pattern = "<B%d-ButtonRelease-%d>" % (button, button)
+        self.save_cursor = widget['cursor'] or ""
+        widget.bind(self.release_pattern, self.on_release)
+        widget.bind("<Motion>", self.on_motion)
+        widget['cursor'] = "hand2"
 
-    def client_exit(self):
-        ##Doing print in here prints to consol
-        print("Goodbye")
-        time.sleep(1)
+    def __del__(self):
+        root = self.root
+        self.root = None
+        if root:
+            try:
+                del root.__dnd
+            except AttributeError:
+                pass
+
+    def on_motion(self, event):
+        x, y = event.x_root, event.y_root
+        target_widget = self.initial_widget.winfo_containing(x, y)
+        source = self.source
+        new_target = None
+        while target_widget:
+            try:
+                attr = target_widget.dnd_accept
+            except AttributeError:
+                pass
+            else:
+                new_target = attr(source, event)
+                if new_target:
+                    break
+            target_widget = target_widget.master
+        old_target = self.target
+        if old_target is new_target:
+            if old_target:
+                old_target.dnd_motion(source, event)
+        else:
+            if old_target:
+                self.target = None
+                old_target.dnd_leave(source, event)
+            if new_target:
+                new_target.dnd_enter(source, event)
+                self.target = new_target
+
+    def on_release(self, event):
+        self.finish(event, 1)
+
+    def cancel(self, event=None):
+        self.finish(event, 0)
+
+    def finish(self, event, commit=0):
+        target = self.target
+        source = self.source
+        widget = self.initial_widget
+        root = self.root
+        try:
+            del root.__dnd
+            self.initial_widget.unbind(self.release_pattern)
+            self.initial_widget.unbind("<Motion>")
+            widget['cursor'] = self.save_cursor
+            self.target = self.source = self.initial_widget = self.root = None
+            if target:
+                if commit:
+                    target.dnd_commit(source, event)
+                else:
+                    target.dnd_leave(source, event)
+        finally:
+            source.dnd_end(target, event)
+
+
+
+class ExitButton:
+
+    def __init__(self, name):
+        self.name = name
+        self.canvas = self.label = self.id = None
+
+    def attach(self, canvas, x=10, y=30):
+        if canvas is self.canvas:
+            self.canvas.coords(self.id, x, y)
+            return
+        if self.canvas:
+            self.detach()
+        if not canvas:
+            return
+
+        sayHiButton = tkinter.Button(canvas,text = "Say Hi",command = self.press)
+        id = canvas.create_window(x, y, window=sayHiButton, anchor="nw")
+        self.canvas = canvas
+        self.id = id
+
+    def press(self):
+        i1 = Possible_Answer("ICON1")
+        i1.attach(self.canvas)
         exit()
-    def say_Hi(self,T):
-        print("Say Hi")
-        T.config(state = NORMAL)
-        T.insert(END, "Just a text Widget\nin two lines\n")
-        T.config(state=DISABLED)
+       
 
 
 
+class Possible_Answer:
 
-print("Hello");
+    def __init__(self, name):
+        self.name = name
+        self.canvas = self.label = self.id = None
 
-print("John Has the Code x=3 right now, can you help John turn that x into a 4?");
+    def attach(self, canvas, x=10, y=10):
+        if canvas is self.canvas:
+            self.canvas.coords(self.id, x, y)
+            return
+        if self.canvas:
+            self.detach()
+        if not canvas:
+            return
+        label = tkinter.Label(canvas, text=self.name,
+                              borderwidth=2, relief="raised")
+        id = canvas.create_window(x, y, window=label, anchor="nw")
+        self.canvas = canvas
+        self.label = label
+        self.id = id
+        label.bind("<ButtonPress>", self.press)
 
-#Sets up root to be a new Tkinter
-root = Tk();
-#Sets the size of the Window
-root.geometry("400x300")
-#Creates a new app with the root that we have created before
-app = Application(root)
-#Starts its loop
-root.mainloop();
+    def detach(self):
+        canvas = self.canvas
+        if not canvas:
+            return
+        id = self.id
+        label = self.label
+        self.canvas = self.label = self.id = None
+        canvas.delete(id)
+        label.destroy()
 
-#Getting user input
-Help_Input = raw_input("Enter your code : ");
-print(Help_Input);
+    def press(self, event):
+        if dnd_start(self, event):
+            # where the pointer is relative to the label widget:
+            self.x_off = event.x
+            self.y_off = event.y
+            # where the widget is relative to the canvas:
+            self.x_orig, self.y_orig = self.canvas.coords(self.id)
 
-#Splitting a String based on
-Help_Input_Split = Help_Input.split(" ")
+    def move(self, event):
+        x, y = self.where(self.canvas, event)
+        self.canvas.coords(self.id, x, y)
 
-if(Help_Input == "123"):
-    print(Help_Input + 2);
+    def putback(self):
+        self.canvas.coords(self.id, self.x_orig, self.y_orig)
 
-# for(Help_Input.)
+    def where(self, canvas, event):
+        # where the corner of the canvas is relative to the screen:
+        x_org = canvas.winfo_rootx()
+        y_org = canvas.winfo_rooty()
+        # where the pointer is relative to the canvas widget:
+        x = event.x_root - x_org
+        y = event.y_root - y_org
+        # compensate for initial pointer offset
+        return x - self.x_off, y - self.y_off
 
+    def dnd_end(self, target, event):
+        pass
+
+
+class Tester:
+
+    def __init__(self, root):
+        self.top = tkinter.Toplevel(root)
+        self.canvas = tkinter.Canvas(self.top, width=100, height=100)
+        self.canvas.pack(fill="both", expand=1)
+        self.canvas.dnd_accept = self.dnd_accept
+
+    def dnd_accept(self, source, event):
+        return self
+
+    def dnd_enter(self, source, event):
+        self.canvas.focus_set() # Show highlight border
+        x, y = source.where(self.canvas, event)
+        x1, y1, x2, y2 = source.canvas.bbox(source.id)
+        dx, dy = x2-x1, y2-y1
+        self.dndid = self.canvas.create_rectangle(x, y, x+dx, y+dy)
+        self.dnd_motion(source, event)
+
+    def dnd_motion(self, source, event):
+        x, y = source.where(self.canvas, event)
+        x1, y1, x2, y2 = self.canvas.bbox(self.dndid)
+        self.canvas.move(self.dndid, x-x1, y-y1)
+
+    def dnd_leave(self, source, event):
+        self.top.focus_set() # Hide highlight border
+        self.canvas.delete(self.dndid)
+        self.dndid = None
+
+    def dnd_commit(self, source, event):
+        self.dnd_leave(source, event)
+        x, y = source.where(self.canvas, event)
+        source.attach(self.canvas, x, y)
+
+
+
+def test():
+    #Starting the root as a tkinter window
+    root = tkinter.Tk()
+    #root.geometry("+1+1")
+    root.withdraw()
+    #Main Game Canvas
+    t1 = Tester(root)
+    t1.top.geometry("+1+80")
+
+    b1 = ExitButton("Button 1")
+    b1.attach(t1.canvas,20,20)
+    
+    
+    i1 = Possible_Answer("ICON1")
+    i1.attach(t1.canvas)
+
+    root.mainloop()
+
+
+#Run Game
+test()
