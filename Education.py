@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import tkinter
+import time
 
 def dnd_start(source, event):
     h = DndHandler(source, event)
@@ -9,7 +10,7 @@ def dnd_start(source, event):
         return None
 
 
-
+##DND HANDLER (Found online)
 class DndHandler:
 
     root = None
@@ -97,12 +98,22 @@ class DndHandler:
 
 
 
-class ExitButton:
-
+##The Class for my exit Button
+class Button:
+    p1_a1 = 0
+    p1_a2 = 0
+    p1_a3 = 0
+    a1_a1 = 0
+    a1_a2 = 0
+    a1_a3 = 0
+    #Names it whatever Name We pass in for it
     def __init__(self, name):
+        #Set that name
         self.name = name
+        print("Self.Name:",self.name)
         self.canvas = self.label = self.id = None
 
+    #This actually Attaches it to the Canvas (The X and Y can be overriden but these are the default values)
     def attach(self, canvas, x=10, y=30):
         if canvas is self.canvas:
             self.canvas.coords(self.id, x, y)
@@ -112,26 +123,54 @@ class ExitButton:
         if not canvas:
             return
 
-        sayHiButton = tkinter.Button(canvas,text = "Say Hi",command = self.press)
-        id = canvas.create_window(x, y, window=sayHiButton, anchor="nw")
-        self.canvas = canvas
-        self.id = id
+        #Actually Creates the Exit Button
+        if(self.name == "EXIT"):
+            print("Exit")
+            ExitButton = tkinter.Button(canvas,text = "Exit",command = self.exit)
+            id = canvas.create_window(x, y, window=ExitButton, anchor="nw")
+            self.canvas = canvas
+            self.id = id
+            
+        elif(self.name == "Problem 1"):
+            print("TEST1")
+            Problem1Button = tkinter.Button(canvas,text = "Problem 1",command = self.problem_1)
+            id = canvas.create_window(x, y, window=Problem1Button, anchor="nw")
+            self.canvas = canvas
+            self.id = id
 
-    def press(self):
-        i1 = Possible_Answer("ICON1")
-        i1.attach(self.canvas)
+    def exit(self):
         exit()
-       
+
+    def problem_1(self):
+        self.p1_a1 = Possible_Answer("X",1)
+        self.p1_a1.attach(self.canvas,50,300)
+        self.p1_a2 = Possible_Answer("=",2)
+        self.p1_a2.attach(self.canvas,100,300)
+        self.p1_a3 = Possible_Answer("4",3)
+        self.p1_a3.attach(self.canvas,150,300)
+        self.a1_a1 = Answer_Box("1",1,self.p1_a1,self.p1_a2,self.p1_a3)
+        self.a1_a1.attach(self.canvas,50,350)
+        # self.a1_a2 = Answer_Box("2",2,self.p1_a1,self.p1_a2,self.p1_a3)
+        # self.a1_a2.attach(self.canvas,100,350)
+        # self.a1_a3 = Answer_Box("3",3,self.p1_a1,self.p1_a2,self.p1_a3)
+        # self.a1_a3.attach(self.canvas,150,350)
+        print(self.p1_a1.get_y())
+        self.a1_a1.check_Boxes()
+        #time.sleep(1)
 
 
-
+        
 class Possible_Answer:
-
-    def __init__(self, name):
+    x=0
+    y=0
+    def __init__(self, name, correctSpot):
         self.name = name
+        self.correctSpot = correctSpot
         self.canvas = self.label = self.id = None
 
     def attach(self, canvas, x=10, y=10):
+        self.x = x
+        self.y = y
         if canvas is self.canvas:
             self.canvas.coords(self.id, x, y)
             return
@@ -184,13 +223,70 @@ class Possible_Answer:
 
     def dnd_end(self, target, event):
         pass
+    
+    def get_x(self):
+        print(self.x)
+        return self.x
+
+    def get_y(self):
+        print(self.y)
+        return self.y
+
+        
+class Answer_Box:
+    x=0
+    y=0
+    def __init__(self, name, number,test1,test2,test3):
+        self.name = name
+        self.number = number
+        self.test1 = test1
+        self.test2 = test2
+        self.test3 = test3
+        self.canvas = self.label = self.id = None
+
+
+    def attach(self, canvas, x=10, y=10):
+        self.x = x
+        self.y = y
+        if canvas is self.canvas:
+            self.canvas.coords(self.id, x, y)
+            return
+        if self.canvas:
+            self.detach()
+        if not canvas:
+            return
+        label = tkinter.Label(canvas, text=self.name,
+                              borderwidth=2, relief="raised")
+        id = canvas.create_window(x, y, window=label, anchor="nw")
+        self.canvas = canvas
+        self.label = label
+        self.id = id
+        
+    def get_x(self):
+        print(self.x)
+        return self.x
+
+    def get_y(self):
+        print(self.y)
+        return self.y
+
+    def check_Boxes(self):
+        print("In Check Boxes")
+        if(self.y == self.test1.get_y()):
+            print("Collision")
+        else:
+            print("heere")
+            self.check_Boxes
+            
+
+
 
 
 class Tester:
 
     def __init__(self, root):
         self.top = tkinter.Toplevel(root)
-        self.canvas = tkinter.Canvas(self.top, width=100, height=100)
+        self.canvas = tkinter.Canvas(self.top, width=400, height=400)
         self.canvas.pack(fill="both", expand=1)
         self.canvas.dnd_accept = self.dnd_accept
 
@@ -231,14 +327,18 @@ def test():
     t1 = Tester(root)
     t1.top.geometry("+1+80")
 
-    b1 = ExitButton("Button 1")
-    b1.attach(t1.canvas,20,20)
+    b1 = Button("EXIT")
+    b1.attach(t1.canvas,200,200)
+
+    print("HERE")
+    b2 = Button("Problem 1")
+    b2.attach(t1.canvas,10,0)
+
     
-    
-    i1 = Possible_Answer("ICON1")
-    i1.attach(t1.canvas)
 
     root.mainloop()
+
+
 
 
 #Run Game
